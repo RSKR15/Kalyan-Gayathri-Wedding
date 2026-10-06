@@ -283,7 +283,7 @@ footer small{display:block;font-family:'Cinzel',serif;font-size:11px;letter-spac
         <h1 class="names">Sai Kalyan <span class="flower">❀</span> Gayathri</h1>
         <div class="ornament"><div class="rule"></div><div class="dot"></div><div class="rule"></div></div>
         <p class="date-line">FRIDAY · NOVEMBER 20 · 2026</p>
-        <p class="place">Sri Venkateshwara Temple Kalyana Mandapam, Bridgewater, NJ</p>
+        <p class="place">Sri Venkateshwara Temple, Bridgewater, NJ</p>
       </div>
     </div>
   </section>
@@ -320,9 +320,8 @@ footer small{display:block;font-family:'Cinzel',serif;font-size:11px;letter-spac
       <div class="page3-text">
         <p class="ww-title">WHEN &amp; WHERE</p>
         <div class="event">
-          <p class="label">MEHENDI</p>
           <h3>Mehendi Night</h3>
-          <p class="when">Wednesday, November 18, 2026 · Evening</p>
+          <p class="when">Wednesday, November 18, 2026 · 5:00 PM</p>
           <p class="venue" id="mehendi-venue"><span class="tba">Venue to be announced</span></p>
           <p class="addr" id="mehendi-addr"></p>
           <a class="btn solid" id="mehendi-map" href="#" target="_blank" rel="noopener" style="display:none">VIEW MAP ↗</a>
@@ -358,7 +357,7 @@ footer small{display:block;font-family:'Cinzel',serif;font-size:11px;letter-spac
             </div>
             <div class="field">
               <label for="r-phone">PHONE NUMBER <span style="color:var(--red)">*</span></label>
-              <input id="r-phone" type="tel" autocomplete="tel" placeholder="e.g. (123) 456-7890" required>
+              <input id="r-phone" type="tel" autocomplete="tel" placeholder="e.g. (732) 555-0123" required>
             </div>
             <div class="field">
               <span class="lab">WILL YOU JOIN US?</span>
@@ -371,7 +370,7 @@ footer small{display:block;font-family:'Cinzel',serif;font-size:11px;letter-spac
               <div class="field">
                 <span class="lab">WHICH EVENTS WILL YOU ATTEND?</span>
                 <div class="checks">
-                  <label class="check"><input type="checkbox" id="r-mehendi" checked><span>Mehendi<small>Wed, Nov 18 · Evening</small></span></label>
+                  <label class="check"><input type="checkbox" id="r-mehendi" checked><span>Mehendi<small>Wed, Nov 18 · 5:00 PM</small></span></label>
                   <label class="check"><input type="checkbox" id="r-wedding" checked><span>Wedding<small>Fri, Nov 20 · 9:00 AM</small></span></label>
                 </div>
               </div>
@@ -497,6 +496,18 @@ const CONFIG = {
    ========================================================= */
 const $ = id => document.getElementById(id);
 const digits = s => (s||'').replace(/\D/g,'');
+/* Valid US number: 10 digits (optional leading 1), area code & exchange can't start with 0 or 1 */
+function usPhone(s){
+  let d = digits(s);
+  if(d.length === 11 && d[0] === '1') d = d.slice(1);
+  return /^[2-9]\d{2}[2-9]\d{6}$/.test(d) ? d : null;
+}
+function fmtPhone(d){ return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); }
+['r-phone','find-phone'].forEach(id=>{
+  const el = document.getElementById(id); if(!el) return;
+  el.setAttribute('inputmode','tel'); el.setAttribute('maxlength','17');
+  el.addEventListener('blur', ()=>{ const d = usPhone(el.value); if(d) el.value = fmtPhone(d); });
+});
 const scriptReady = () => /^https:\/\/script\.google\.com\//.test(CONFIG.SCRIPT_URL);
 
 function setChoice(val){
@@ -546,9 +557,13 @@ function showConfirmation(entry){
 $('rsvp-form').addEventListener('submit', async e=>{
   e.preventDefault();
   const err = $('r-error'); err.style.display = 'none';
-  const name = $('r-name').value.trim(), phone = $('r-phone').value.trim();
-  if(!name || digits(phone).length < 7){
-    err.textContent = 'Please provide your name and a valid phone number.'; err.style.display = 'block'; return;
+  const name = $('r-name').value.trim();
+  const phone = usPhone($('r-phone').value);
+  if(!name){
+    err.textContent = 'Please enter your name.'; err.style.display = 'block'; return;
+  }
+  if(!phone){
+    err.textContent = 'Please enter a valid 10-digit US phone number, e.g. (732) 555-0123.'; err.style.display = 'block'; return;
   }
   const attending = document.querySelector('.choice.active').dataset.val;
   const accepts = attending === 'accepts';
@@ -575,8 +590,9 @@ $('rsvp-form').addEventListener('submit', async e=>{
 });
 
 $('find-btn').addEventListener('click', async ()=>{
-  const q = $('find-phone').value.trim(), msg = $('find-msg'); msg.textContent = '';
-  if(digits(q).length < 7){ msg.textContent = 'Please enter the phone number you used.'; return; }
+  const msg = $('find-msg'); msg.textContent = '';
+  const q = usPhone($('find-phone').value);
+  if(!q){ msg.textContent = 'Please enter a valid 10-digit US phone number.'; return; }
   const btn = $('find-btn'); btn.textContent = '…'; btn.disabled = true;
   try{
     let entry = null;
