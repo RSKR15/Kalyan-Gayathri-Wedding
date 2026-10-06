@@ -555,8 +555,7 @@ $('rsvp-form').addEventListener('submit', async e=>{
   const btn = document.querySelector('.send'); btn.textContent = 'SENDING…'; btn.disabled = true;
   try{
     if(scriptReady()){
-      const fd = new FormData(); Object.entries(entry).forEach(([k,v])=>fd.append(k,v));
-      await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:fd, mode:'no-cors' });
+      await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:new URLSearchParams(entry), mode:'no-cors' });
     } else {
       console.warn('RSVP sheet not connected yet — set CONFIG.SCRIPT_URL. Saved on this device only.');
     }
