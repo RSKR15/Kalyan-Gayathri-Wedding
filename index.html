@@ -198,6 +198,8 @@ main,section,footer{position:relative;z-index:1}
 .mem-pick span{color:var(--ink-soft);font-size:15px}
 .mem-thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
 .mem-thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.mem-bar{height:6px;border-radius:99px;background:rgba(201,168,76,.25);overflow:hidden;margin-top:14px}
+.mem-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--marigold),var(--red));border-radius:99px;transition:width .4s ease}
 .mem-status{margin:12px 0 0!important;color:var(--brown)!important;min-height:1.4em}
 .mem-status.ok{color:var(--sage)!important;font-weight:600}
 /* ===== EVENTS ===== */
@@ -430,6 +432,7 @@ footer small{display:block;font-family:'Cinzel',serif;font-size:11px;letter-spac
             </div>
             <div class="error" id="m-error"></div>
             <button class="send" type="submit" id="m-send">SHARE MEMORY</button>
+            <div class="mem-bar" id="m-bar" hidden><span></span></div>
             <p class="mem-status" id="m-status" aria-live="polite"></p>
           </form>
         </div>
@@ -641,6 +644,7 @@ $('find-btn').addEventListener('click', async ()=>{
   const form = document.getElementById('mem-form'); if(!form) return;
   const files = document.getElementById('m-files'), thumbs = document.getElementById('m-thumbs');
   const err = document.getElementById('m-error'), status = document.getElementById('m-status'), btn = document.getElementById('m-send');
+  const bar = document.getElementById('m-bar'), fill = bar.firstElementChild;
   const MAX = 10;
   const picked = ()=> [...files.files].filter(f=>/^image\//.test(f.type)).slice(0, MAX);
   files.addEventListener('change', ()=>{
@@ -674,16 +678,25 @@ $('find-btn').addEventListener('click', async ()=>{
     if(!list.length){ err.textContent = 'Please choose at least one photo.'; err.style.display = 'block'; return; }
     if(!scriptReady()){ err.textContent = 'Photo sharing isn’t connected yet.'; err.style.display = 'block'; return; }
     btn.disabled = true; btn.textContent = 'SHARING…';
-    let ok = 0, failed = 0;
-    for(let i = 0; i < list.length; i++){
-      status.textContent = 'Sharing photo ' + (i+1) + ' of ' + list.length + '…';
-      try{
-        const data = await shrink(list[i]);
-        const res = await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:new URLSearchParams({ action:'memory', name, note, idx:String(i+1), mime:'image/jpeg', data }) });
-        const out = await res.json().catch(()=>({}));
-        if(out.result === 'success') ok++; else failed++;
-      }catch(ex){ failed++; }
+    let ok = 0, failed = 0, done = 0, next = 0;
+    const total = list.length;
+    bar.hidden = false; fill.style.width = '6%';
+    const show = ()=>{ status.textContent = 'Sharing your memories… ' + done + ' of ' + total + ' done. Please keep this page open for a moment.'; fill.style.width = Math.max(6, Math.round(done / total * 100)) + '%'; };
+    show();
+    async function worker(){
+      while(next < total){
+        const i = next++;
+        try{
+          const data = await shrink(list[i]);
+          const res = await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:new URLSearchParams({ action:'memory', name, note, idx:String(i+1), mime:'image/jpeg', data }) });
+          const out = await res.json().catch(()=>({}));
+          if(out.result === 'success') ok++; else failed++;
+        }catch(ex){ failed++; }
+        done++; show();
+      }
     }
+    await Promise.all(Array.from({length: Math.min(3, total)}, worker));   // 3 photos at a time
+    bar.hidden = true; fill.style.width = '0';
     btn.disabled = false; btn.textContent = 'SHARE MEMORY';
     const first = name.split(/\s+/)[0];
     if(ok && !failed){

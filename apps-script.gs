@@ -39,11 +39,12 @@ function findRow_(sh, phone) {
 }
 
 function doPost(e) {
+  const p = e.parameter;
+  // photos don't need to wait behind RSVP saves — handle them first, without the lock
+  if (p.action === 'memory') return saveMemory_(p);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const p = e.parameter;
-    if (p.action === 'memory') return saveMemory_(p);
     const phone = digits_(p.phone);
     if (!phone) return json_({ result: 'error', error: 'missing phone' });
     const sh = getSheet_();
