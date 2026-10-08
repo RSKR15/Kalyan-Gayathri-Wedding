@@ -43,6 +43,7 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     const p = e.parameter;
+    if (p.action === 'memory') return saveMemory_(p);
     const phone = digits_(p.phone);
     if (!phone) return json_({ result: 'error', error: 'missing phone' });
     const sh = getSheet_();
@@ -69,6 +70,54 @@ function doGet(e) {
     data: { name: v[1], phone: String(v[2]), attending: v[3], mehendi: v[4],
             wedding: v[5], guests: String(v[6]), note: v[7], day2: v[8] || '' }
   });
+}
+
+/* ---------- Share a Memory: photos saved to Drive + logged in a "Memories" tab ---------- */
+const MEM_FOLDER = 'Wedding Memories – Sai Kalyan & Gayathri';
+const MEM_SHEET = 'Memories';
+
+function memFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('MEM_FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (err) {} }
+  const it = DriveApp.getFoldersByName(MEM_FOLDER);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(MEM_FOLDER);
+  props.setProperty('MEM_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+function memSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(MEM_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(MEM_SHEET);
+    sh.appendRow(['Shared on', 'Name', 'Their words', 'Photo']);
+    sh.getRange(1, 1, 1, 4).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// Run this once from the editor (Run ▶ setupMemories) to allow Drive access and create the folder + Memories tab.
+function setupMemories() {
+  const folder = memFolder_();
+  memSheet_();
+  Logger.log('Memories folder ready: ' + folder.getUrl());
+}
+
+function saveMemory_(p) {
+  const mime = String(p.mime || 'image/jpeg');
+  if (!/^image\//.test(mime) || !p.data) return json_({ result: 'error', error: 'images only' });
+  const bytes = Utilities.base64Decode(p.data);
+  if (bytes.length > 8 * 1024 * 1024) return json_({ result: 'error', error: 'too large' });
+  const name = String(p.name || 'Guest').replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 60) || 'Guest';
+  const note = String(p.note || '').slice(0, 500);
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HHmmss');
+  const fileName = name + ' – ' + stamp + ' – ' + (p.idx || 1) + '.jpg';
+  const file = memFolder_().createFile(Utilities.newBlob(bytes, mime, fileName));
+  if (note) file.setDescription(note);
+  memSheet_().appendRow([new Date(), name, note, file.getUrl()]);
+  return json_({ result: 'success' });
 }
 
 function json_(obj) {
