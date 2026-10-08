@@ -7,7 +7,7 @@
  * their row is updated instead of duplicated.
  */
 const SHEET_NAME = 'RSVPs';
-const HEADERS = ['Last updated', 'Name', 'Phone', 'Attending', 'Mehendi', 'Wedding', 'Guests', 'Note'];
+const HEADERS = ['Last updated', 'Name', 'Phone', 'Attending', 'Mehendi', 'Wedding', 'Guests', 'Note', 'Nov 19 (Haldi & ceremonies)'];
 
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -18,6 +18,10 @@ function getSheet_() {
     sh.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     sh.setFrozenRows(1);
     sh.getRange('C:C').setNumberFormat('@'); // keep phone numbers as text
+  }
+  // add any new header columns to an existing sheet
+  if (sh.getLastColumn() < HEADERS.length) {
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
   }
   return sh;
 }
@@ -43,7 +47,7 @@ function doPost(e) {
     if (!phone) return json_({ result: 'error', error: 'missing phone' });
     const sh = getSheet_();
     const row = [new Date(), p.name || '', phone, p.attending || '', p.mehendi || '',
-                 p.wedding || '', Number(p.guests || 0), p.note || ''];
+                 p.wedding || '', Number(p.guests || 0), p.note || '', p.day2 || ''];
     const r = findRow_(sh, phone);
     if (r > 0) sh.getRange(r, 1, 1, row.length).setValues([row]);
     else sh.appendRow(row);
@@ -63,7 +67,7 @@ function doGet(e) {
   return json_({
     result: 'success',
     data: { name: v[1], phone: String(v[2]), attending: v[3], mehendi: v[4],
-            wedding: v[5], guests: String(v[6]), note: v[7] }
+            wedding: v[5], guests: String(v[6]), note: v[7], day2: v[8] || '' }
   });
 }
 
