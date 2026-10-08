@@ -585,7 +585,7 @@ function showConfirmation(entry){
   const mn = document.getElementById('m-name'); if(mn && entry.name) mn.value = entry.name;
   const first = (entry.name||'').trim().split(/\s+/)[0] || 'friend';
   if(entry.attending === 'accepts'){
-    const evs = [entry.mehendi==='yes'?'Mehendi':'', entry.day2==='yes'?'the Nov 19 ceremonies':'', entry.wedding==='yes'?'the Wedding':''].filter(Boolean);
+    const evs = [entry.mehendi==='yes'?'Mehendi':'', entry.day2==='yes'?'Haldi & Ceremonies':'', entry.wedding==='yes'?'the Wedding':''].filter(Boolean);
     const ev = evs.length>1 ? evs.slice(0,-1).join(', ')+' and '+evs[evs.length-1] : (evs[0]||'');
     $('c-title').textContent = 'See you there, ' + first + '!';
     $('c-body').textContent = 'Thank you for joyfully accepting' + (ev ? ' — we’ll see you at ' + ev : '') +
