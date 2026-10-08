@@ -7,7 +7,7 @@
  * their row is updated instead of duplicated.
  */
 const SHEET_NAME = 'RSVPs';
-const HEADERS = ['Last updated', 'Name', 'Phone', 'Attending', 'Mehendi', 'Wedding', 'Guests', 'Note', 'Nov 19 (Haldi & ceremonies)'];
+const HEADERS = ['Last updated', 'Name', 'Phone', 'Attending', 'Mehendi', 'Haldi & Ceremonies', 'Wedding', 'Guests', 'Note'];
 
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -19,11 +19,27 @@ function getSheet_() {
     sh.setFrozenRows(1);
     sh.getRange('C:C').setNumberFormat('@'); // keep phone numbers as text
   }
-  // add any new header columns to an existing sheet
-  if (sh.getLastColumn() < HEADERS.length) {
+  migrateColumns_(sh);
+  // keep the header row up to date (new or renamed columns)
+  const head = sh.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  if (head.join('|') !== HEADERS.join('|')) {
     sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
   }
   return sh;
+}
+
+// One-time: move the old column order (… Mehendi, Wedding, Guests, Note, Nov 19)
+// to the new order (… Mehendi, Haldi & Ceremonies, Wedding, Guests, Note) and use "-" for events not on that invite.
+function migrateColumns_(sh) {
+  if (sh.getLastColumn() < 6 || sh.getRange(1, 6).getValue() !== 'Wedding') return;
+  const dash = v => (v === '' || v === 'wedding link') ? '-' : v;
+  const last = sh.getLastRow();
+  if (last >= 2) {
+    const rows = sh.getRange(2, 1, last - 1, 9).getValues().map(r =>
+      [r[0], r[1], r[2], r[3], dash(r[4]), dash(r[8]), dash(r[5]), r[6], r[7]]);
+    sh.getRange(2, 1, rows.length, 9).setValues(rows);
+  }
+  sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
 }
 
 const digits_ = s => String(s || '').replace(/\D/g, '');
@@ -48,8 +64,8 @@ function doPost(e) {
     const phone = digits_(p.phone);
     if (!phone) return json_({ result: 'error', error: 'missing phone' });
     const sh = getSheet_();
-    const row = [new Date(), p.name || '', phone, p.attending || '', p.mehendi || '',
-                 p.wedding || '', Number(p.guests || 0), p.note || '', p.day2 || ''];
+    const row = [new Date(), p.name || '', phone, p.attending || '', p.mehendi || '-',
+                 p.day2 || '-', p.wedding || '-', Number(p.guests || 0), p.note || ''];
     const r = findRow_(sh, phone);
     if (r > 0) sh.getRange(r, 1, 1, row.length).setValues([row]);
     else sh.appendRow(row);
@@ -69,7 +85,7 @@ function doGet(e) {
   return json_({
     result: 'success',
     data: { name: v[1], phone: String(v[2]), attending: v[3], mehendi: v[4],
-            wedding: v[5], guests: String(v[6]), note: v[7], day2: v[8] || '' }
+            day2: v[5], wedding: v[6], guests: String(v[7]), note: v[8] }
   });
 }
 

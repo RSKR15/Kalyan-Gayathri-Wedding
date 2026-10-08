@@ -592,7 +592,7 @@ $('rsvp-form').addEventListener('submit', async e=>{
   }
   const attending = document.querySelector('.choice.active').dataset.val;
   const accepts = attending === 'accepts';
-  const mehendi = 'wedding link';
+  const mehendi = '-';
   const wedding = accepts ? 'yes' : 'no';
   if(accepts && mehendi==='no' && wedding==='no'){
     err.textContent = 'Please choose at least one event, or select “Regretfully declines”.'; err.style.display = 'block'; return;
